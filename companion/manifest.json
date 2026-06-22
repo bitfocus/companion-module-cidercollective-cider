@@ -8,7 +8,7 @@
 	"version": "1.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-cidercollective-cider.git",
-	"bugs": "https://github.com/miltechniks/companion-module-cidercollective-cider/issues",
+	"bugs": "https://github.com/bitfocus/companion-module-cidercollective-cider/issues",
 	"maintainers": [
 		{
 			"name": "Lukas Mittermeier",
