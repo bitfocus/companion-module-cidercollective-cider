@@ -1,9 +1,9 @@
 {
 	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
 	"type": "connection",
-	"id": "cider",
-	"name": "Cider",
-	"shortname": "cider",
+	"id": "cidercollective-cider",
+	"name": "cidercollective-cider",
+	"shortname": "Cider",
 	"description": "Control the Cider Apple Music client via API",
 	"version": "1.0.0",
 	"license": "MIT",
