@@ -1,14 +1,12 @@
-const { combineRgb } = require('@companion-module/base')
-
 module.exports = function (self) {
     self.setFeedbackDefinitions({
         is_playing: {
-            name: 'Playback Status Color',
+            name: 'Playback State',
             type: 'boolean', 
-            label: 'Change color depending on Play/Pause state',
+            label: 'Target matches playback state',
             defaultStyle: {
-                bgcolor: combineRgb(0, 255, 0),
-                color: combineRgb(0, 0, 0),
+                bgcolor: 0x00FF00,
+                color: 0,
             },
             options: [
                 {
@@ -16,8 +14,8 @@ module.exports = function (self) {
                     id: 'state',
                     label: 'Status',
                     choices: [
-                        { id: 'playing', label: 'When music is playing' },
-                        { id: 'paused', label: 'When music is paused' }
+                        { id: 'playing', label: 'Playing' },
+                        { id: 'paused', label: 'Paused' }
                     ],
                     default: 'playing'
                 }

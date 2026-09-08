@@ -1,8 +1,10 @@
-const { InstanceBase, Regex, InstanceStatus } = require('@companion-module/base')
+const { InstanceBase, InstanceStatus } = require('@companion-module/base')
 const UpgradeScripts = require('./upgrades')
 const UpdateActions = require('./actions')
 const UpdateFeedbacks = require('./feedbacks')
 const UpdateVariableDefinitions = require('./variables')
+const UpdatePresetDefinitions = require('./presets')
+const { HOST_PATTERN, isValidHost, isValidToken } = require('./validate')
 
 const { io } = require('socket.io-client')
 
@@ -15,14 +17,27 @@ class ModuleInstance extends InstanceBase {
         this.config = config
 
         this.playbackState = false
+        this.songTitle = ''
 
         this.updateStatus(InstanceStatus.Connecting)
 
         this.initSocketIo()
 
-        this.updateActions() 
-        this.updateFeedbacks() 
-        this.updateVariableDefinitions() 
+        this.updateActions()
+        this.updateFeedbacks()
+        this.updateVariableDefinitions()
+        this.updatePresetDefinitions()
+
+        this.setVariableValues({
+            song_title: this.songTitle,
+            playback_state: 'paused',
+        })
+    }
+
+    setPlaybackState(isPlaying) {
+        this.playbackState = isPlaying
+        this.setVariableValues({ playback_state: isPlaying ? 'playing' : 'paused' })
+        this.checkFeedbacks('is_playing')
     }
 
     initSocketIo() {
@@ -31,16 +46,15 @@ class ModuleInstance extends InstanceBase {
             delete this.socket
         }
 
-        const ip = this.config.host;
-        const port = this.config.port;
+        const host = this.config.host;
         const token = this.config.token;
 
-        if (!ip || !token) {
-            this.updateStatus(InstanceStatus.BadConfig, 'IP or Token missing')
+        if (!isValidHost(host) || !isValidToken(token)) {
+            this.updateStatus(InstanceStatus.BadConfig, 'Host or Token missing/invalid')
             return
         }
 
-        const url = `http://${ip}:${port}`
+        const url = `http://${host}`
         
         this.socket = io(url, {
             extraHeaders: {
@@ -63,16 +77,18 @@ class ModuleInstance extends InstanceBase {
 
                     if (payload.type === 'playbackStatus.playbackStateDidChange' && payload.data) {
                         const state = payload.data.state;
-                        this.playbackState = (state === 'playing');
-                        this.checkFeedbacks('is_playing');
+                        this.setPlaybackState(state === 'playing');
+                        if (payload.data.attributes && payload.data.attributes.name) {
+                            this.songTitle = payload.data.attributes.name;
+                            this.setVariableValues({ song_title: this.songTitle });
+                        }
                     }
-                    
+
                     else if (payload.type === 'playbackStatus.playbackTimeDidChange' && payload.data) {
                         const isPlaying = payload.data.isPlaying;
-                        
+
                         if (isPlaying !== undefined && isPlaying !== this.playbackState) {
-                            this.playbackState = isPlaying;
-                            this.checkFeedbacks('is_playing');
+                            this.setPlaybackState(isPlaying);
                         }
                     }
                 } catch (error) {
@@ -95,12 +111,17 @@ class ModuleInstance extends InstanceBase {
     async destroy() {
         if (this.socket !== undefined) {
             this.socket.disconnect()
+            delete this.socket
         }
     }
 
     async configUpdated(config) {
-        this.config = config
-        this.initSocketIo()
+        if (this.config.host !== config.host || this.config.token !== config.token) {
+            this.config = config
+            this.initSocketIo()
+        } else {
+            this.config = config
+        }
     }
 
     getConfigFields() {
@@ -108,18 +129,10 @@ class ModuleInstance extends InstanceBase {
             {
                 type: 'textinput',
                 id: 'host',
-                label: 'Target IP',
-                width: 8,
-                regex: Regex.IP,
-                default: '127.0.0.1',
-            },
-            {
-                type: 'textinput',
-                id: 'port',
-                label: 'Target Port',
-                width: 4,
-                regex: Regex.PORT,
-                default: '10767',
+                label: 'Target Host (Host/IP:Port)',
+                width: 12,
+                default: '127.0.0.1:10767',
+                regex: HOST_PATTERN.toString(),
             },
             {
                 type: 'textinput',
@@ -140,6 +153,10 @@ class ModuleInstance extends InstanceBase {
 
     updateVariableDefinitions() {
         UpdateVariableDefinitions(this)
+    }
+
+    updatePresetDefinitions() {
+        UpdatePresetDefinitions(this)
     }
 }
 
